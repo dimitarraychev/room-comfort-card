@@ -80,7 +80,6 @@ class RoomComfortCard extends HTMLElement {
           position: relative;
           box-sizing: border-box;
           height: 56px;
-          padding: 3px 0;
           cursor: pointer;
           -webkit-tap-highlight-color: transparent;
         }
@@ -98,9 +97,9 @@ class RoomComfortCard extends HTMLElement {
         .card:focus-visible .pill { outline: 2px solid var(--ccr-color); outline-offset: 2px; }
         .icon {
           flex: none;
-          width: 38px;
-          height: 38px;
-          margin: 6px;
+          width: 42px;
+          height: 42px;
+          margin: 7px;
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -113,7 +112,7 @@ class RoomComfortCard extends HTMLElement {
           flex: 1;
           min-width: 0;
           align-self: flex-start;
-          margin-top: 7px;
+          margin-top: 8px;
           line-height: 1.2;
         }
         .name {
