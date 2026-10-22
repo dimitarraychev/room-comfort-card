@@ -8,7 +8,7 @@
 const CARD_TAG = "room-comfort-card";
 const EDITOR_TAG = "room-comfort-card-editor";
 const CARD_NAME = "Room Comfort Card";
-const CARD_VERSION = "0.1.3-beta";
+const CARD_VERSION = "v0.1.4-beta";
 
 // Fallback/Default colors used when no explicit color or zone is provided.
 const COLOR_MAP = {
@@ -29,7 +29,7 @@ const PRESETS = {
   temperature: {
     icon: "mdi:thermometer",
     unit: "°C",
-    decimals: 1,
+    decimals: null, // null means inherit native sensor decimals if available
     padding: 5,
     minIcon: "mdi:snowflake",
     maxIcon: "mdi:fire",
@@ -45,8 +45,8 @@ const PRESETS = {
   humidity: {
     icon: "mdi:water-percent",
     unit: "%",
-    decimals: 0,
-    padding: 10,
+    decimals: null, // null means inherit native sensor decimals if available
+    padding: 20,    // Increased padding to give more span room on high humidity
     minIcon: "mdi:water-minus",
     maxIcon: "mdi:water-plus",
     labels: ["Very dry", "Dry", "Comfortable", "Humid", "Very humid"],
@@ -55,7 +55,7 @@ const PRESETS = {
       low: 30,
       comfort_low: 40,
       comfort_high: 55,
-      high: 60,
+      high: 65,
     },
   },
 };
@@ -66,6 +66,13 @@ const ENTITY_ID = /^[a-z0-9_]+\.[a-z0-9_]+$/;
 const esc = (s) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const clamp = (n, a, b) => Math.min(Math.max(n, a), b);
+
+// Helper to extract native decimal count from a state string if needed
+const getDecimals = (val) => {
+  const str = String(val);
+  if (!str.includes(".")) return 0;
+  return str.split(".")[1].length;
+};
 
 class RoomComfortCard extends HTMLElement {
   constructor() {
@@ -182,7 +189,7 @@ class RoomComfortCard extends HTMLElement {
           <div class="end"></div>
           <div class="bar"></div>
         </div>
-      `;
+      </div>`;
     const $ = (s) => this.shadowRoot.querySelector(s);
     this._card = $(".card");
     this._icon = $(".icon");
@@ -235,16 +242,13 @@ class RoomComfortCard extends HTMLElement {
   // ---------- Resolvers ----------
   _color(spec) {
     if (!spec) return null;
-    // 1. Check if spec matches key in COLOR_MAP
     if (COLOR_MAP[spec]) {
       return COLOR_MAP[spec];
     }
-    // 2. Check if it's an explicit entity ID holding a color state
     if (ENTITY_ID.test(spec) && this._hass?.states[spec]) {
       const s = this._hass.states[spec].state;
       return UNAVAILABLE.includes(s) ? null : s;
     }
-    // 3. Otherwise treat as raw color value (e.g. hex code)
     return spec;
   }
 
@@ -253,7 +257,6 @@ class RoomComfortCard extends HTMLElement {
     if (typeof spec === "number") return spec;
     const n = Number(spec);
     if (!Number.isNaN(n)) return n;
-    // Check if it's an entity ID to fetch state from
     const st = this._hass?.states[spec];
     if (st) {
       const f = parseFloat(st.state);
@@ -270,11 +273,8 @@ class RoomComfortCard extends HTMLElement {
   _colorMap(preset) {
     const map = {};
     preset.labels.forEach((label, i) => (map[label] = this._color(preset.zones[i])));
-    
-    // Fallback default gray
     let gray = this._color("gray");
 
-    // Optional color map entity support (if explicitly configured)
     const entId = this._config.color_map_entity;
     if (entId && this._hass?.states[entId]) {
       const ent = this._hass.states[entId];
@@ -293,7 +293,6 @@ class RoomComfortCard extends HTMLElement {
     return { map, gray };
   }
 
-  // Entities picked by the user for the lowest / highest comparison.
   _compareIds() {
     const list = this._config.compare_entities;
     if (!Array.isArray(list) || list.length === 0) return [];
@@ -346,7 +345,8 @@ class RoomComfortCard extends HTMLElement {
     }
 
     const unit = cfg.unit ?? stateObj?.attributes?.unit_of_measurement ?? preset.unit;
-    const decimals = cfg.decimals ?? preset.decimals;
+    // Decimals: if config specifies it, use it. Otherwise use preset or inherit native sensor state decimals.
+    const decimals = cfg.decimals ?? preset.decimals ?? (stateObj ? getDecimals(stateObj.state) : 1);
 
     const bar =
       "linear-gradient(to right," +
