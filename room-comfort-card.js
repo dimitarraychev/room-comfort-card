@@ -47,7 +47,7 @@ const PRESETS = {
     icon: "mdi:water-percent",
     unit: "%",
     decimals: 0,
-    scale_min: 0,
+    scale_min: 10,
     scale_max: 90,
     minIcon: "mdi:water-minus",
     maxIcon: "mdi:water-plus",
