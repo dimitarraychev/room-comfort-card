@@ -11,7 +11,7 @@ const CARD_NAME = "Room Comfort Card";
 const CARD_VERSION = "1.0.0";
 
 // Fallback colors, used only when input_text.apple_<name> does not exist.
-const APPLE = {
+const COLOR_MAP = {
   gray: "#8E8E93",
   cyan: "#64D2FF",
   blue: "#0A84FF",
@@ -237,9 +237,9 @@ class RoomComfortCard extends HTMLElement {
   // ---------- Resolvers ----------
   _color(spec) {
     if (!spec) return null;
-    if (APPLE[spec]) {
+    if (COLOR_MAP[spec]) {
       const s = this._hass.states[`input_text.apple_${spec}`];
-      return s && !UNAVAILABLE.includes(s.state) ? s.state : APPLE[spec];
+      return s && !UNAVAILABLE.includes(s.state) ? s.state : COLOR_MAP[spec];
     }
     if (ENTITY_ID.test(spec) && this._hass.states[spec]) {
       const s = this._hass.states[spec].state;
@@ -299,7 +299,7 @@ class RoomComfortCard extends HTMLElement {
     const stateObj = hass.states[cfg.entity];
     const labels = Array.isArray(cfg.labels) && cfg.labels.length === 5 ? cfg.labels : preset.labels;
     const zoneSpecs = Array.isArray(cfg.zone_colors) && cfg.zone_colors.length === 5 ? cfg.zone_colors : preset.zones;
-    const zones = zoneSpecs.map((z) => this._color(z) || APPLE.gray);
+    const zones = zoneSpecs.map((z) => this._color(z) || COLOR_MAP.gray);
     const { map, gray } = this._colorMap(preset);
 
     const raw = stateObj ? parseFloat(stateObj.state) : NaN;
