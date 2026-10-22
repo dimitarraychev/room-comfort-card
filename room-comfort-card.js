@@ -8,9 +8,9 @@
 const CARD_TAG = "room-comfort-card";
 const EDITOR_TAG = "room-comfort-card-editor";
 const CARD_NAME = "Room Comfort Card";
-const CARD_VERSION = "0.1.3";
+const CARD_VERSION = "0.1.4-beta";
 
-// Fallback colors, used when a color or zone spec is not directly specified or found.
+// Fallback/Default colors used when no explicit color or zone is provided.
 const COLOR_MAP = {
   gray: "#8E8E93",
   cyan: "#64D2FF",
@@ -24,7 +24,7 @@ const COLOR_MAP = {
 };
 
 // Defaults match the author's setup. Each threshold can be overridden per card
-// with a number or with the entity id of an input_number.
+// with a direct number or a sensor entity ID.
 const PRESETS = {
   temperature: {
     icon: "mdi:thermometer",
@@ -36,10 +36,10 @@ const PRESETS = {
     labels: ["Very cold", "Cold", "Comfortable", "Warm", "Very hot"],
     zones: ["cyan", "blue", "green", "orange", "red"],
     thresholds: {
-      low: { entity: "input_number.temperature_low_threshold", value: 18 },
-      comfort_low: { entity: "input_number.temperature_comfort_low_threshold", value: 20 },
-      comfort_high: { entity: "input_number.temperature_comfort_high_threshold", value: 25 },
-      high: { entity: "input_number.temperature_high_threshold", value: 28 },
+      low: 18,
+      comfort_low: 20,
+      comfort_high: 25,
+      high: 28,
     },
   },
   humidity: {
@@ -52,10 +52,10 @@ const PRESETS = {
     labels: ["Very dry", "Dry", "Comfortable", "Humid", "Very humid"],
     zones: ["orange", "yellow", "green", "cyan", "blue"],
     thresholds: {
-      low: { entity: "input_number.humidity_low_threshold", value: 30 },
-      comfort_low: { entity: "input_number.humidity_comfort_low_threshold", value: 40 },
-      comfort_high: { entity: "input_number.humidity_comfort_high_threshold", value: 55 },
-      high: { entity: "input_number.humidity_high_threshold", value: 60 },
+      low: 30,
+      comfort_low: 40,
+      comfort_high: 55,
+      high: 60,
     },
   },
 };
@@ -235,16 +235,16 @@ class RoomComfortCard extends HTMLElement {
   // ---------- Resolvers ----------
   _color(spec) {
     if (!spec) return null;
-    // Check if the spec matches a key in the fallback COLOR_MAP first
+    // 1. Check if spec matches key in COLOR_MAP
     if (COLOR_MAP[spec]) {
       return COLOR_MAP[spec];
     }
-    // Check if it's an entity ID containing a color state
-    if (ENTITY_ID.test(spec) && this._hass.states[spec]) {
+    // 2. Check if it's an explicit entity ID holding a color state
+    if (ENTITY_ID.test(spec) && this._hass?.states[spec]) {
       const s = this._hass.states[spec].state;
       return UNAVAILABLE.includes(s) ? null : s;
     }
-    // Otherwise, treat spec as a literal color string (e.g., hex code or named color)
+    // 3. Otherwise treat as raw color value (e.g. hex code)
     return spec;
   }
 
@@ -253,7 +253,8 @@ class RoomComfortCard extends HTMLElement {
     if (typeof spec === "number") return spec;
     const n = Number(spec);
     if (!Number.isNaN(n)) return n;
-    const st = this._hass.states[spec];
+    // Check if it's an entity ID to fetch state from
+    const st = this._hass?.states[spec];
     if (st) {
       const f = parseFloat(st.state);
       if (Number.isFinite(f)) return f;
@@ -263,28 +264,36 @@ class RoomComfortCard extends HTMLElement {
 
   _threshold(key) {
     const def = PRESETS[this._config.mode].thresholds[key];
-    return this._num(this._config.thresholds?.[key]) ?? this._num(def.entity) ?? def.value;
+    return this._num(this._config.thresholds?.[key]) ?? def;
   }
 
   _colorMap(preset) {
     const map = {};
     preset.labels.forEach((label, i) => (map[label] = this._color(preset.zones[i])));
-    const entId = this._config.color_map_entity ?? "sensor.comfort_color_map";
-    const ent = this._hass.states[entId];
+    
+    // Fallback default gray
     let gray = this._color("gray");
-    if (ent) {
+
+    // Optional color map entity support (if explicitly configured)
+    const entId = this._config.color_map_entity;
+    if (entId && this._hass?.states[entId]) {
+      const ent = this._hass.states[entId];
       Object.assign(map, ent.attributes?.colors || {});
-      if (ent.attributes?.default_gray) gray = ent.attributes.default_gray;
+      if (ent.attributes?.default_gray) gray = this._color(ent.attributes.default_gray);
     }
+
     if (this._config.color_map) {
-      for (const [k, v] of Object.entries(this._config.color_map)) map[k] = this._color(v) || v;
+      for (const [k, v] of Object.entries(this._config.color_map)) {
+        map[k] = this._color(v) || v;
+      }
     }
-    if (this._config.default_color) gray = this._color(this._config.default_color) || gray;
+    if (this._config.default_color) {
+      gray = this._color(this._config.default_color) || gray;
+    }
     return { map, gray };
   }
 
-  // Entities picked by the user for the lowest / highest comparison. The
-  // card's own entity is always part of it. With no list, no icon is shown.
+  // Entities picked by the user for the lowest / highest comparison.
   _compareIds() {
     const list = this._config.compare_entities;
     if (!Array.isArray(list) || list.length === 0) return [];
@@ -296,7 +305,7 @@ class RoomComfortCard extends HTMLElement {
     const cfg = this._config;
     const hass = this._hass;
     const preset = PRESETS[cfg.mode];
-    const stateObj = hass.states[cfg.entity];
+    const stateObj = hass?.states[cfg.entity];
     const labels = Array.isArray(cfg.labels) && cfg.labels.length === 5 ? cfg.labels : preset.labels;
     const zoneSpecs = Array.isArray(cfg.zone_colors) && cfg.zone_colors.length === 5 ? cfg.zone_colors : preset.zones;
     const zones = zoneSpecs.map((z) => this._color(z) || COLOR_MAP.gray);
@@ -315,17 +324,14 @@ class RoomComfortCard extends HTMLElement {
     const pos = (x) => clamp(((x - lo) / (hi - lo)) * 100, 0, 100);
     const stops = [0, pos(low), pos(cl), pos(ch), pos(high), 100];
 
-    // Status always comes from the thresholds: below low, below comfort low,
-    // up to and including comfort high, up to and including high, above.
     let idx = -1;
     if (valid) idx = raw < low ? 0 : raw < cl ? 1 : raw <= ch ? 2 : raw <= high ? 3 : 4;
     const status = idx >= 0 ? labels[idx] : "";
     const color = valid ? map[status] || zones[idx] || gray : gray;
 
-    // Lowest / highest of the group.
     let isMin = false;
     let isMax = false;
-    if (valid) {
+    if (valid && hass) {
       const vals = this._compareIds()
         .map((id) => parseFloat(hass.states[id]?.state))
         .filter((n) => Number.isFinite(n));
@@ -462,7 +468,7 @@ const EDITOR_SCHEMA = [
   {
     type: "expandable",
     name: "thresholds",
-    title: "Thresholds (number or input_number entity; empty uses defaults)",
+    title: "Thresholds (number or entity ID; empty uses defaults)",
     schema: [
       { name: "low", selector: { text: {} } },
       { name: "comfort_low", selector: { text: {} } },
