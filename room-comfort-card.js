@@ -87,7 +87,7 @@ class RoomComfortCard extends HTMLElement {
         .pill {
           position: relative;
           box-sizing: border-box;
-          height: 50px;
+          height: 100%;
           display: flex;
           align-items: center;
           border-radius: var(--bubble-border-radius, 32px);
