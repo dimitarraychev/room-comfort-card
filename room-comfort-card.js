@@ -29,7 +29,7 @@ const PRESETS = {
   temperature: {
     icon: "mdi:thermometer",
     unit: "°C",
-    decimals: 0,
+    decimals: 1,
     scale_min: 10,
     scale_max: 30,
     minIcon: "mdi:snowflake",
@@ -46,7 +46,7 @@ const PRESETS = {
   humidity: {
     icon: "mdi:water-percent",
     unit: "%",
-    decimals: 0,
+    decimals: 1,
     scale_min: 10,
     scale_max: 90,
     minIcon: "mdi:water-minus",
