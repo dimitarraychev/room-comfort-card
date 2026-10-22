@@ -143,7 +143,7 @@ class RoomComfortCard extends HTMLElement {
           display: flex;
           color: var(--ccr-color);
           --mdc-icon-size: 18px;
-          margin-bottom: 3px;
+          margin-bottom: 2px;
         }
         .value {
           font-size: 13px;
