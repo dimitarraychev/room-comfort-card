@@ -8,7 +8,7 @@
 const CARD_TAG = "room-comfort-card";
 const EDITOR_TAG = "room-comfort-card-editor";
 const CARD_NAME = "Room Comfort Card";
-const CARD_VERSION = "v0.1.4-beta";
+const CARD_VERSION = "0.1.4-beta";
 
 // Fallback/Default colors used when no explicit color or zone is provided.
 const COLOR_MAP = {
@@ -46,7 +46,7 @@ const PRESETS = {
     icon: "mdi:water-percent",
     unit: "%",
     decimals: null, // null means inherit native sensor decimals if available
-    padding: 20,    // Increased padding to give more span room on high humidity
+    padding: 20,
     minIcon: "mdi:water-minus",
     maxIcon: "mdi:water-plus",
     labels: ["Very dry", "Dry", "Comfortable", "Humid", "Very humid"],
@@ -55,7 +55,7 @@ const PRESETS = {
       low: 30,
       comfort_low: 40,
       comfort_high: 55,
-      high: 65,
+      high: 60,
     },
   },
 };
