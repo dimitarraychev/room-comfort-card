@@ -8,7 +8,7 @@
 const CARD_TAG = "room-comfort-card";
 const EDITOR_TAG = "room-comfort-card-editor";
 const CARD_NAME = "Room Comfort Card";
-const CARD_VERSION = "0.1.4-beta";
+const CARD_VERSION = "0.1.5-beta";
 
 // Fallback/Default colors used when no explicit color or zone is provided.
 const COLOR_MAP = {
@@ -29,8 +29,9 @@ const PRESETS = {
   temperature: {
     icon: "mdi:thermometer",
     unit: "°C",
-    decimals: null, // null means inherit native sensor decimals if available
-    padding: 5,
+    decimals: 0,
+    scale_min: 10,
+    scale_max: 30,
     minIcon: "mdi:snowflake",
     maxIcon: "mdi:fire",
     labels: ["Very cold", "Cold", "Comfortable", "Warm", "Very hot"],
@@ -45,8 +46,9 @@ const PRESETS = {
   humidity: {
     icon: "mdi:water-percent",
     unit: "%",
-    decimals: null, // null means inherit native sensor decimals if available
-    padding: 20,
+    decimals: 0,
+    scale_min: 0,
+    scale_max: 90,
     minIcon: "mdi:water-minus",
     maxIcon: "mdi:water-plus",
     labels: ["Very dry", "Dry", "Comfortable", "Humid", "Very humid"],
@@ -66,13 +68,6 @@ const ENTITY_ID = /^[a-z0-9_]+\.[a-z0-9_]+$/;
 const esc = (s) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const clamp = (n, a, b) => Math.min(Math.max(n, a), b);
-
-// Helper to extract native decimal count from a state string if needed
-const getDecimals = (val) => {
-  const str = String(val);
-  if (!str.includes(".")) return 0;
-  return str.split(".")[1].length;
-};
 
 class RoomComfortCard extends HTMLElement {
   constructor() {
@@ -317,9 +312,11 @@ class RoomComfortCard extends HTMLElement {
     const cl = this._threshold("comfort_low");
     const ch = this._threshold("comfort_high");
     const high = this._threshold("high");
-    const pad = Number.isFinite(Number(cfg.scale_padding)) ? Number(cfg.scale_padding) : preset.padding;
-    const lo = low - pad;
-    const hi = high + pad;
+    
+    // Use fixed scale bounds from preset (or config overrides) instead of relying on thresholds + padding
+    const lo = this._num(cfg.scale_min) ?? preset.scale_min;
+    const hi = this._num(cfg.scale_max) ?? preset.scale_max;
+    
     const pos = (x) => clamp(((x - lo) / (hi - lo)) * 100, 0, 100);
     const stops = [0, pos(low), pos(cl), pos(ch), pos(high), 100];
 
@@ -345,8 +342,7 @@ class RoomComfortCard extends HTMLElement {
     }
 
     const unit = cfg.unit ?? stateObj?.attributes?.unit_of_measurement ?? preset.unit;
-    // Decimals: if config specifies it, use it. Otherwise use preset or inherit native sensor state decimals.
-    const decimals = cfg.decimals ?? preset.decimals ?? (stateObj ? getDecimals(stateObj.state) : 1);
+    const decimals = cfg.decimals ?? preset.decimals;
 
     const bar =
       "linear-gradient(to right," +
@@ -430,7 +426,7 @@ class RoomComfortCard extends HTMLElement {
 
 // ---------- Visual editor ----------
 const EDITOR_LABELS = {
-  entity: "Sensor (temperature or humidity)",
+  entity: "Sensor",
   mode: "Mode",
   name: "Name",
   icon: "Icon",
@@ -444,11 +440,21 @@ const EDITOR_LABELS = {
   color_map: "Color map (YAML, label: color)",
   color_map_entity: "Color map sensor",
   decimals: "Decimals",
-  scale_padding: "Bar padding beyond low and high",
+  scale_min: "Scale minimum",
+  scale_max: "Scale maximum",
 };
 
-const EDITOR_SCHEMA = [
-  { name: "entity", required: true, selector: { entity: { domain: "sensor" } } },
+const getEditorSchema = (mode) => [
+  { 
+    name: "entity", 
+    required: true, 
+    selector: { 
+      entity: { 
+        domain: "sensor", 
+        device_class: mode === "humidity" ? "humidity" : "temperature" 
+      } 
+    } 
+  },
   {
     name: "mode",
     selector: {
@@ -463,7 +469,16 @@ const EDITOR_SCHEMA = [
   },
   { name: "name", selector: { text: {} } },
   { name: "icon", selector: { icon: {} } },
-  { name: "compare_entities", selector: { entity: { multiple: true, domain: "sensor" } } },
+  { 
+    name: "compare_entities", 
+    selector: { 
+      entity: { 
+        multiple: true, 
+        domain: "sensor", 
+        device_class: mode === "humidity" ? "humidity" : "temperature" 
+      } 
+    } 
+  },
   { name: "tap_action", selector: { ui_action: {} } },
   {
     type: "expandable",
@@ -485,7 +500,8 @@ const EDITOR_SCHEMA = [
       { name: "color_map", selector: { object: {} } },
       { name: "color_map_entity", selector: { entity: { domain: "sensor" } } },
       { name: "decimals", selector: { number: { min: 0, max: 3, mode: "box" } } },
-      { name: "scale_padding", selector: { number: { min: 0, max: 50, mode: "box" } } },
+      { name: "scale_min", selector: { number: { mode: "box" } } },
+      { name: "scale_max", selector: { number: { mode: "box" } } },
     ],
   },
 ];
@@ -523,6 +539,7 @@ class RoomComfortCardEditor extends HTMLElement {
 
   _update() {
     if (!this._config || !this._hass) return;
+    const mode = this._config.mode || "temperature";
     if (!this._form) {
       this._form = document.createElement("ha-form");
       this._form.computeLabel = (s) => EDITOR_LABELS[s.name] || s.name;
@@ -534,7 +551,7 @@ class RoomComfortCardEditor extends HTMLElement {
       this.appendChild(this._form);
     }
     this._form.hass = this._hass;
-    this._form.schema = EDITOR_SCHEMA;
+    this._form.schema = getEditorSchema(mode);
     this._form.data = { mode: "temperature", ...this._config };
   }
 }
