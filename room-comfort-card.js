@@ -10,7 +10,7 @@ const EDITOR_TAG = "room-comfort-card-editor";
 const CARD_NAME = "Room Comfort Card";
 const CARD_VERSION = "1.0.0";
 
-// Fallback colours, used only when input_text.apple_<name> does not exist.
+// Fallback colors, used only when input_text.apple_<name> does not exist.
 const APPLE = {
   gray: "#8E8E93",
   cyan: "#64D2FF",
@@ -435,8 +435,8 @@ const EDITOR_LABELS = {
   comfort_low: "Comfort low",
   comfort_high: "Comfort high",
   high: "High",
-  color_map: "Colour map (YAML, label: colour)",
-  color_map_entity: "Colour map sensor",
+  color_map: "Color map (YAML, label: color)",
+  color_map_entity: "Color map sensor",
   decimals: "Decimals",
   scale_padding: "Bar padding beyond low and high",
 };
@@ -473,7 +473,7 @@ const EDITOR_SCHEMA = [
   {
     type: "expandable",
     name: "advanced",
-    title: "Colours and display",
+    title: "Colors and display",
     flatten: true,
     schema: [
       { name: "color_map", selector: { object: {} } },
