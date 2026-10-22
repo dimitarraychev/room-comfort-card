@@ -3,10 +3,19 @@
 A clean, standalone, single-row Lovelace card for Home Assistant designed to monitor room climate conditions. It works **completely out of the box** with zero required integrations, HACS dependencies, or helper entities.
 
 The card provides a rich set of visual indicators in a compact design:
-* **Dynamic Status Text:** Calculates room comfort level (e.g., *Cold*, *Comfortable*, *Humid*) based on threshold values.
-* **Color-Coded Value & Pill:** Colors the card elements dynamically based on the current status zone.
-* **5-Zone Range Bar:** Displays a visual range bar divided into five comfort zones with an animated dot representing the current reading.
-* **Group Comparisons:** Optionally highlights the room with the lowest or highest reading across a specified group of sensors using min/max icons.
+- **Dynamic Status Text:** Calculates room comfort level (e.g., *Cold*, *Comfortable*, *Humid*) based on threshold values.
+- **Color-Coded Value & Pill:** Colors the card elements dynamically based on the current status zone.
+- **5-Zone Range Bar:** Displays a visual range bar divided into five comfort zones with an animated dot representing the current reading.
+- **Group Comparisons:** Optionally highlights the room with the lowest or highest reading across a specified group of sensors using min/max icons.
+
+---
+
+## Screenshots
+
+<div align="center">
+  <img src="screenshots/temperature-example.png" width="45%" alt="Temperature Mode" />
+  <img src="screenshots/humidity-example.png" width="45%" alt="Humidity Mode" />
+</div>
 
 ---
 
@@ -99,8 +108,9 @@ All features can be configured visually in the dashboard editor or via YAML:
 | `default_color` | `gray` (`#8E8E93`) | Fallback color when value is unknown or unavailable. |
 | `min_icon` / `max_icon` | Mode defaults | Icons used when the room is the lowest or highest in `compare_entities`. |
 | `unit` | Sensor unit / Mode default | Measurement unit suffix. |
-| `decimals` | `1` (temp), `0` (humidity) | Number of decimal places displayed. |
-| `scale_padding` | `5` (temp), `10` (humidity) | Visual margin added below `low` and above `high` on the bar range. |
+| `decimals` | `1` | Number of decimal places displayed. |
+| `scale_min` | `10` (temp), `10` (humidity) | Minimum value bound for the range bar scale. |
+| `scale_max` | `30` (temp), `90` (humidity) | Maximum value bound for the range bar scale. |
 | `tap_action` | `more-info` | Tap action (`navigate`, `more-info`, `toggle`, `perform-action`, `url`, `none`). |
 
 ## Thresholds & Colors
