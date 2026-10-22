@@ -8,7 +8,7 @@
 const CARD_TAG = "room-comfort-card";
 const EDITOR_TAG = "room-comfort-card-editor";
 const CARD_NAME = "Room Comfort Card";
-const CARD_VERSION = "0.1.5-beta";
+const CARD_VERSION = "0.1.6-beta";
 
 // Fallback/Default colors used when no explicit color or zone is provided.
 const COLOR_MAP = {
