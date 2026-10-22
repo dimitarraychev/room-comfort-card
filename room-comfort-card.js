@@ -8,9 +8,9 @@
 const CARD_TAG = "room-comfort-card";
 const EDITOR_TAG = "room-comfort-card-editor";
 const CARD_NAME = "Room Comfort Card";
-const CARD_VERSION = "1.0.0";
+const CARD_VERSION = "0.1.3";
 
-// Fallback colors, used only when input_text.apple_<name> does not exist.
+// Fallback colors, used when a color or zone spec is not directly specified or found.
 const COLOR_MAP = {
   gray: "#8E8E93",
   cyan: "#64D2FF",
@@ -71,8 +71,6 @@ class RoomComfortCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    // The card draws on a plain div, not ha-card, so theme-wide card styles
-    // (borders, glass shadows) cannot add a ring around the pill.
     this.shadowRoot.innerHTML = `
       <style>
         :host { display: block; }
@@ -184,7 +182,7 @@ class RoomComfortCard extends HTMLElement {
           <div class="end"></div>
           <div class="bar"></div>
         </div>
-      </div>`;
+      `;
     const $ = (s) => this.shadowRoot.querySelector(s);
     this._card = $(".card");
     this._icon = $(".icon");
@@ -237,14 +235,16 @@ class RoomComfortCard extends HTMLElement {
   // ---------- Resolvers ----------
   _color(spec) {
     if (!spec) return null;
+    // Check if the spec matches a key in the fallback COLOR_MAP first
     if (COLOR_MAP[spec]) {
-      const s = this._hass.states[`input_text.apple_${spec}`];
-      return s && !UNAVAILABLE.includes(s.state) ? s.state : COLOR_MAP[spec];
+      return COLOR_MAP[spec];
     }
+    // Check if it's an entity ID containing a color state
     if (ENTITY_ID.test(spec) && this._hass.states[spec]) {
       const s = this._hass.states[spec].state;
       return UNAVAILABLE.includes(s) ? null : s;
     }
+    // Otherwise, treat spec as a literal color string (e.g., hex code or named color)
     return spec;
   }
 
