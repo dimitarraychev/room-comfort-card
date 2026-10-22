@@ -99,7 +99,7 @@ class RoomComfortCard extends HTMLElement {
           flex: none;
           width: 42px;
           height: 42px;
-          margin: 7px;
+          margin: 8px;
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -114,6 +114,7 @@ class RoomComfortCard extends HTMLElement {
           align-self: flex-start;
           margin-top: 8px;
           line-height: 1.2;
+          margin-left: 2px;
         }
         .name {
           font-size: 14px;
@@ -142,6 +143,7 @@ class RoomComfortCard extends HTMLElement {
           display: flex;
           color: var(--ccr-color);
           --mdc-icon-size: 18px;
+          margin-bottom: 3px;
         }
         .value {
           font-size: 13px;
