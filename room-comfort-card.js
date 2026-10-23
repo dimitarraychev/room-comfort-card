@@ -89,7 +89,7 @@ class RoomComfortCard extends HTMLElement {
           height: 100%;
           display: flex;
           align-items: center;
-          border-radius: var(--bubble-border-radius, 32px);
+          border-radius: 32px;
           background: color-mix(in srgb, var(--ccr-color) 10%, transparent);
           box-shadow: inset 0 0 10px color-mix(in srgb, var(--ccr-color) 45%, transparent);
         }
