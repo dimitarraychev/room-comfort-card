@@ -8,7 +8,7 @@
 const CARD_TAG = "room-comfort-card";
 const EDITOR_TAG = "room-comfort-card-editor";
 const CARD_NAME = "Room Comfort Card";
-const CARD_VERSION = "0.1.8-beta";
+const CARD_VERSION = "0.2.0-beta";
 
 // Fallback/Default colors used when no explicit color or zone is provided.
 const COLOR_MAP = {
@@ -137,16 +137,16 @@ class RoomComfortCard extends HTMLElement {
           display: flex;
           align-items: center;
           gap: 6px;
-          padding: 0 14px 0 8px;
+          padding: 0 16px 0 8px;
         }
         .extreme {
           display: flex;
           color: var(--ccr-color);
-          --mdc-icon-size: 18px;
-          margin-bottom: 2px;
+          --mdc-icon-size: 20px;
+          margin-bottom: 0px;
         }
         .value {
-          font-size: 13px;
+          font-size: 1rem;
           font-weight: 600;
           white-space: nowrap;
           color: var(--ccr-color);
