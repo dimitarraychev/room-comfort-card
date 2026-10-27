@@ -3,12 +3,15 @@
  * A single-row Lovelace card for a room's temperature or humidity. It shows the
  * comfort status (worked out from thresholds), a five-zone bar with a position
  * dot, and an icon on the lowest and highest room of a group.
+ *
+ * Shows up under "Community" in the card picker's "By entity" tab (Home Assistant 2026.6+)
+ * via `getEntitySuggestion` on the window.customCards entry.
  */
 
 const CARD_TAG = "room-comfort-card";
 const EDITOR_TAG = "room-comfort-card-editor";
 const CARD_NAME = "Room Comfort Card";
-const CARD_VERSION = "0.2.0-beta";
+const CARD_VERSION = "0.2.1-beta";
 
 // Fallback/Default colors used when no explicit color or zone is provided.
 const COLOR_MAP = {
@@ -68,6 +71,14 @@ const ENTITY_ID = /^[a-z0-9_]+\.[a-z0-9_]+$/;
 const esc = (s) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const clamp = (n, a, b) => Math.min(Math.max(n, a), b);
+
+// ---------- Entity detection (used by the card picker) ----------
+/** Returns "temperature", "humidity" or null based on the sensor's device class. */
+const detectMode = (hass, entityId) => {
+  if (typeof entityId !== "string" || !entityId.startsWith("sensor.")) return null;
+  const dc = hass?.states?.[entityId]?.attributes?.device_class;
+  return dc === "temperature" || dc === "humidity" ? dc : null;
+};
 
 class RoomComfortCard extends HTMLElement {
   constructor() {
@@ -205,11 +216,28 @@ class RoomComfortCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass) {
-    const first = Object.keys(hass?.states || {}).find(
-      (id) => id.startsWith("sensor.") && hass.states[id].attributes?.device_class === "temperature"
-    );
-    return { entity: first || "sensor.temperature", mode: "temperature" };
+  // Used by the "By card" tab. Signature: (hass, entities, entitiesFallback).
+  static getStubConfig(hass, entities, entitiesFallback) {
+    const pool = [
+      ...(Array.isArray(entities) ? entities : []),
+      ...(Array.isArray(entitiesFallback) ? entitiesFallback : []),
+      ...Object.keys(hass?.states || {}),
+    ];
+    const entity = pool.find((e) => detectMode(hass, e)) || "sensor.temperature";
+    return { entity, mode: detectMode(hass, entity) || "temperature" };
+  }
+
+  // Used by the "By entity" tab (Home Assistant 2026.6+), see window.customCards below.
+  static getEntitySuggestion(hass, entityId) {
+    const mode = detectMode(hass, entityId);
+    if (!mode) return null;
+    return {
+      config: {
+        type: `custom:${CARD_TAG}`,
+        entity: entityId,
+        mode,
+      },
+    };
   }
 
   setConfig(config) {
@@ -312,11 +340,16 @@ class RoomComfortCard extends HTMLElement {
     const cl = this._threshold("comfort_low");
     const ch = this._threshold("comfort_high");
     const high = this._threshold("high");
-    
-    // Use fixed scale bounds from preset (or config overrides) instead of relying on thresholds + padding
-    const lo = this._num(cfg.scale_min) ?? preset.scale_min;
-    const hi = this._num(cfg.scale_max) ?? preset.scale_max;
-    
+
+    // Fixed scale bounds from the preset (or config overrides).
+    let lo = this._num(cfg.scale_min) ?? preset.scale_min;
+    let hi = this._num(cfg.scale_max) ?? preset.scale_max;
+    if (!(hi > lo)) {
+      // Guard against a zero/negative range (would divide by zero).
+      lo = preset.scale_min;
+      hi = preset.scale_max;
+    }
+
     const pos = (x) => clamp(((x - lo) / (hi - lo)) * 100, 0, 100);
     const stops = [0, pos(low), pos(cl), pos(ch), pos(high), 100];
 
@@ -445,15 +478,15 @@ const EDITOR_LABELS = {
 };
 
 const getEditorSchema = (mode) => [
-  { 
-    name: "entity", 
-    required: true, 
-    selector: { 
-      entity: { 
-        domain: "sensor", 
-        device_class: mode === "humidity" ? "humidity" : "temperature" 
-      } 
-    } 
+  {
+    name: "entity",
+    required: true,
+    selector: {
+      entity: {
+        domain: "sensor",
+        device_class: mode === "humidity" ? "humidity" : "temperature",
+      },
+    },
   },
   {
     name: "mode",
@@ -469,15 +502,15 @@ const getEditorSchema = (mode) => [
   },
   { name: "name", selector: { text: {} } },
   { name: "icon", selector: { icon: {} } },
-  { 
-    name: "compare_entities", 
-    selector: { 
-      entity: { 
-        multiple: true, 
-        domain: "sensor", 
-        device_class: mode === "humidity" ? "humidity" : "temperature" 
-      } 
-    } 
+  {
+    name: "compare_entities",
+    selector: {
+      entity: {
+        multiple: true,
+        domain: "sensor",
+        device_class: mode === "humidity" ? "humidity" : "temperature",
+      },
+    },
   },
   { name: "tap_action", selector: { ui_action: {} } },
   {
@@ -556,15 +589,20 @@ class RoomComfortCardEditor extends HTMLElement {
   }
 }
 
-customElements.define(CARD_TAG, RoomComfortCard);
-customElements.define(EDITOR_TAG, RoomComfortCardEditor);
+// Guard against double-loading (e.g. the resource being registered twice).
+if (!customElements.get(CARD_TAG)) customElements.define(CARD_TAG, RoomComfortCard);
+if (!customElements.get(EDITOR_TAG)) customElements.define(EDITOR_TAG, RoomComfortCardEditor);
 
 window.customCards = window.customCards || [];
-window.customCards.push({
-  type: CARD_TAG,
-  name: CARD_NAME,
-  description: "Temperature or humidity row with comfort status, threshold bar and lowest/highest icon.",
-  preview: true,
-});
+if (!window.customCards.some((c) => c.type === CARD_TAG)) {
+  window.customCards.push({
+    type: CARD_TAG,
+    name: CARD_NAME,
+    description: "Temperature or humidity row with comfort status, threshold bar and lowest/highest icon.",
+    preview: true,
+    // Home Assistant 2026.6+: lists this card under "Community" in the "By entity" tab.
+    getEntitySuggestion: (hass, entityId) => RoomComfortCard.getEntitySuggestion(hass, entityId),
+  });
+}
 
 console.info(`%c ROOM-COMFORT-CARD %c v${CARD_VERSION} `, "color:white;background:#0A84FF;font-weight:700", "color:#0A84FF;background:white");
