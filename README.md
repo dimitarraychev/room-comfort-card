@@ -1,3 +1,10 @@
+> [!IMPORTANT]
+> **This repository is deprecated and no longer maintained.**
+> 
+> The **Room Comfort Card** has been merged into and superseded by the **[Sensor Status Card](https://github.com/YOUR_USERNAME/sensor-status-card)**. All features, preset modes, and updates are now actively maintained there.
+> 
+> Please migrate your dashboard configuration to the Sensor Status Card for ongoing support.
+
 # Room Comfort Card
 
 A clean, standalone, single-row Lovelace card for Home Assistant designed to monitor room climate conditions. It works **completely out of the box** with zero required integrations, HACS dependencies, or helper entities.
